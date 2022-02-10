@@ -1,8 +1,8 @@
 <template>
   <div>
     <iframe id="frameId1" src="appFrame.html" style="width:100%;"/>
-    <iframe id="frameId2" v-if="iframe2Visible" src="appFrame.html" style="width:100%;"/>
     <button @click="handleClick">Add from parent</button>
+    <button @click="handleClick2">Add from parent</button>
     {{$store.state.count}}
     <input v-model.number="increasement" style="margin-left:24px;"/>
   </div>
@@ -18,7 +18,12 @@ export default {
   },
   methods: {
     handleClick () {
-      this.$store.commit('ADD_COUNT', this.increasement)
+      this.$store.commit('add_count', this.increasement)
+    },
+    handleClick2() {
+      console.log(this.$store, '---this.$store---');
+      this.$store.dispatch('set_user_main')
+      console.log(this.$store, '---this.$store---');
     }
   },
   mounted () {

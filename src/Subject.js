@@ -7,30 +7,28 @@ import {
 } from './const'
 
 export default class Subject {
-  constructor ({ids, store, convert}) {
-    this.childs = typeof ids === 'string'
-      ? ids.split(',').map(_ => ({id: _}))
-      : isArray(ids)
-      ? ids
-      : []
+  constructor ({ ids, store }) {
+    this.childs = isArray(ids) ? ids : []
     this.observerList = []
     this.store = store
-    this.convert = isFunction(convert) ? convert : identity
-
+    this.convert = identity
     this.init()
+    debugger
   }
 
   addObserver (id) {
-    let child = this.childs.find(_ => _.id === id)
+    let child = this.childs.find(item => item === id)
     if (!child) return
     const iframe = document.getElementById(id)
+    debugger
     if (iframe && iframe.tagName === 'IFRAME') {
       let observer = new ObserverIframe({id, origin: child.origin, el: iframe})
       this.observerList.push(observer)
-      // initialization sync
+      // 排除内部 mutation
+      const payload = cloneWithout(this.store.state, [Subject.moduleName])
       this.notifyObserver(observer, {
         type: INIT_STATE,
-        payload: cloneWithout(this.store.state, [Subject.moduleName])
+        payload: payload
       })
       return observer
     }
@@ -46,7 +44,9 @@ export default class Subject {
   }
 
   notifyObservers ({id, type, payload}) {
-    for (let obs of this.observerList.filter(_ => _.id !== id)) {
+    // 分发通知
+    const _filter = this.observerList.filter(_ => _.id !== id)
+    for (let obs of _filter) {
       this.notifyObserver(obs, {type, payload})
     }
   }
@@ -60,9 +60,11 @@ export default class Subject {
       namespaced: true,
       mutations: {
         [ADD_IN_BROADCAST_LIST] (state, id) {
+          debugger
           that.addObserver(id)
         },
         [DEL_IN_BROADCAST_LIST] (state, id) {
+          debugger
           that.deleteObserver(id)
         }
       }
@@ -70,7 +72,9 @@ export default class Subject {
 
     // add child mutations
     Object.entries(mutations).forEach(([type, funcList]) => {
-      mutations[childPrefix + type] = funcList.map(f => ({id, payload}) => {
+      mutations[childPrefix + type] = funcList.map(f => (data) => {
+        const {id, payload} = data;
+        debugger
         f(payload)
         that.notifyObservers({id, type, payload})
       })
@@ -79,6 +83,7 @@ export default class Subject {
     const VALID_TYPE_RE = new RegExp(`^(${childPrefix}|${moduleName})`)
     that.store.subscribe(({type, payload}, state) => {
       if (VALID_TYPE_RE.test(type)) return
+      debugger
       that.notifyObservers({type, payload})
     })
 
@@ -88,6 +93,7 @@ export default class Subject {
   update ({ data: {type, payload} }) {
     const {store} = this
     if (!type || !Reflect.has(store._mutations, type)) return
+    debugger
     store.commit(type, payload)
   }
 }

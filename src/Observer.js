@@ -32,6 +32,7 @@ export class Observer {
     this.createdCallback = isFunction(created) ? created : noop
     this.destroyedCallback = isFunction(destroyed) ? destroyed : noop
     this.init()
+    debugger
   }
 
   init () {
@@ -44,13 +45,14 @@ export class Observer {
     Object.entries(mutations).forEach(([type, funcList]) => {
       mutations[parentPrefix + type] = funcList
     })
-    // init mutation
-    mutations[parentPrefix + INIT_STATE] = [payload => {
+    // addObserver 触发的 init_state 将父store合并到子iframe
+    mutations[parentPrefix + INIT_STATE] = [(payload) => {
       Object.assign(store.state, payload)
     }]
 
     store.subscribe(({type, payload}, state) => {
       if (type.indexOf(parentPrefix) >= 0) return
+      debugger
       that.send(childPrefix + type, {id, payload})
     })
 
@@ -61,12 +63,15 @@ export class Observer {
   }
   update ({ data: {type, payload} }) {
     const {store} = this
+    console.log(type, payload, '---type, payload---');
     if ((!type || !Reflect.has(store._mutations, type)) && type !== INIT_STATE) return
+    debugger
     const {parentPrefix} = Observer
     store.commit(parentPrefix + type, payload)
   }
 
   send (type, payload) {
+    debugger
     this.parent && this.parent.postMessage({
       type,
       payload: this.convert(payload)

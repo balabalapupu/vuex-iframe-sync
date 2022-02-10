@@ -1,21 +1,46 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-import {broadcast} from '../../../../src'
+
+
+const userInfo = {
+  namespaced: true,
+  state: () => ({
+    username: 'wangtianyou',
+    uid: 88042
+  }),
+  mutations: {
+    'change_user': (state, payload) => {
+      state.username = state.username + payload
+    }
+  },
+  actions: {
+    'set_user': (ctx) => {
+      ctx.commit('add_count', 100);
+    }
+  },
+}
 
 Vue.use(Vuex)
 
-export default new Vuex.Store({
+export default {
+  modules: {
+    userInfo: userInfo
+  },
   state: {
     count: 0
   },
   getters: {},
   mutations: {
-    'ADD_COUNT' (state, increasement) {
+    'add_count' (state, increasement) {
       state.count = state.count + increasement
     }
   },
-  actions: {},
+  actions: {
+    'set_user_main': (ctx) => {
+      ctx.commit('add_count', 100);
+    }
+  },
   plugins: [
-    broadcast('frameId1,frameId2')
+    // broadcast('frameId1,frameId2')
   ]
-})
+}

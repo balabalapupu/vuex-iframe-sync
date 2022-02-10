@@ -15,7 +15,7 @@ export default {
   },
   methods: {
     handleClick () {
-      this.$store.commit('ADD_COUNT', this.increasement)
+      this.$store.commit('add_count', this.increasement)
     }
   }
 }
