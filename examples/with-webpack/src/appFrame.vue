@@ -1,6 +1,7 @@
 <template>
   <div>
     <button @click="handleClick">Add from iframe</button>
+    <button @click="handleClick2">iframe</button>
     {{$store.state.count}}
     <input v-model.number="increasement" style="margin-left:24px;"/>
   </div>
@@ -16,6 +17,9 @@ export default {
   methods: {
     handleClick () {
       this.$store.commit('add_count', this.increasement)
+    },
+    handleClick2() {
+      this.$store.dispatch('set_user_main')
     }
   }
 }

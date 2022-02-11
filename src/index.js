@@ -2,13 +2,13 @@ import Subject from './Subject'
 import {Observer} from './Observer'
 import {staticOptions} from './const'
 
+
 // sync from parent to iframe
 export const broadcast = (ids) => store => {
-  Subject.moduleName = staticOptions.moduleName
-  Subject.parentPrefix = staticOptions.parentPrefix
-  Subject.childPrefix = staticOptions.childPrefix
-
-  return new Subject({ids, store})
+  return new Subject({
+    ids, 
+    store
+  });
 }
 
 // sync from iframe to parent or other iframe

@@ -4,6 +4,8 @@
     <button @click="handleClick">Add from parent</button>
     <button @click="handleClick2">Add from parent</button>
     {{$store.state.count}}
+    /////
+    {{$store.state.userInfo.uid}}
     <input v-model.number="increasement" style="margin-left:24px;"/>
   </div>
 </template>
@@ -21,16 +23,10 @@ export default {
       this.$store.commit('add_count', this.increasement)
     },
     handleClick2() {
-      console.log(this.$store, '---this.$store---');
       this.$store.dispatch('set_user_main')
-      console.log(this.$store, '---this.$store---');
     }
   },
   mounted () {
-    const that = this
-    setTimeout(function () {
-      that.iframe2Visible = true
-    }, 3000)
   }
 }
 </script>

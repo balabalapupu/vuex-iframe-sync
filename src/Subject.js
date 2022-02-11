@@ -1,103 +1,113 @@
-import {ObserverIframe} from './Observer'
-import {isFunction, isArray, cloneWithout, identity} from './utils'
+import { ObserverIframe } from './Observer'
+import { isArray, cloneWithout, identity, batch, newObserver } from './utils'
+import { staticOptions } from './const'
 import {
   ADD_IN_BROADCAST_LIST,
   DEL_IN_BROADCAST_LIST,
   INIT_STATE
 } from './const'
 
-export default class Subject {
-  constructor ({ ids, store }) {
-    this.childs = isArray(ids) ? ids : []
-    this.observerList = []
-    this.store = store
-    this.convert = identity
-    this.init()
-    debugger
+export default function Subject({ ids, store }) {
+  let childs = isArray(ids) ? ids : []
+  let observerList = []
+  let convert = identity
+  const initFunc = initState(init)
+  // 实例一个observerlist增加监听
+  const notifyObserverIframe = newObserver(invokeNotifyObserver, store)
+  // 广播
+  const notifyObservers = batch((obs, { type, payload}) => {
+    obs.update(type, convert(payload))
+  })
+
+  initFunc(store)
+  /**
+   * message事件监听
+   */
+  function init() {
+    window.addEventListener('message', update)
   }
 
-  addObserver (id) {
-    let child = this.childs.find(item => item === id)
-    if (!child) return
-    const iframe = document.getElementById(id)
-    debugger
-    if (iframe && iframe.tagName === 'IFRAME') {
-      let observer = new ObserverIframe({id, origin: child.origin, el: iframe})
-      this.observerList.push(observer)
-      // 排除内部 mutation
-      const payload = cloneWithout(this.store.state, [Subject.moduleName])
-      this.notifyObserver(observer, {
-        type: INIT_STATE,
-        payload: payload
-      })
-      return observer
+  function initState(fn) {
+    return function (DepStore) {
+      registerModule(DepStore, staticOptions.moduleName)
+      invokeMainMutation(DepStore, staticOptions.childPrefix)
+      invokeObserverMutation(DepStore, { CHILD_: staticOptions.childPrefix, VI_SYNC: staticOptions.moduleName})
+      return fn.apply(null);
     }
-  }
+  };
 
-  deleteObserver (id) {
-    const index = this.observerList.map(_ => _.id).indexOf(id)
-    index >= 0 && this.observerList.splice(index, 1)
-  }
-
-  notifyObserver (obs, {type, payload}) {
-    obs.update(type, this.convert(payload))
-  }
-
-  notifyObservers ({id, type, payload}) {
-    // 分发通知
-    const _filter = this.observerList.filter(_ => _.id !== id)
-    for (let obs of _filter) {
-      this.notifyObserver(obs, {type, payload})
-    }
-  }
-
-  init () {
-    const that = this
-    const {_mutations: mutations} = that.store
-    const {moduleName, childPrefix} = Subject
-
-    that.store.registerModule(moduleName, {
+  /**
+   * 注册内部模块，唤起/删除观察者
+   * @param {*} DepStore 
+   * @param {*} VI_SYNC 
+   */
+  function registerModule(DepStore, VI_SYNC) {
+    DepStore.registerModule(VI_SYNC, {
       namespaced: true,
       mutations: {
-        [ADD_IN_BROADCAST_LIST] (state, id) {
-          debugger
-          that.addObserver(id)
+        [ADD_IN_BROADCAST_LIST](state, id) {
+          addObserver(id)
         },
-        [DEL_IN_BROADCAST_LIST] (state, id) {
-          debugger
-          that.deleteObserver(id)
+        [DEL_IN_BROADCAST_LIST](state, id) {
+          deleteObserver(id)
         }
       }
     })
+  }
 
-    // add child mutations
+  /**
+   * 子状态改变触发主mutation & 广播
+   * @param {*} DepStore 
+   * @param {*} CHILD_ 
+   */
+  function invokeMainMutation(DepStore, CHILD_) {
+    const { _mutations: mutations } = DepStore
     Object.entries(mutations).forEach(([type, funcList]) => {
-      mutations[childPrefix + type] = funcList.map(f => (data) => {
-        const {id, payload} = data;
-        debugger
-        f(payload)
-        that.notifyObservers({id, type, payload})
+      mutations[CHILD_ + type] = funcList.map(item => (data) => {
+        const { id, payload } = data;
+        item(payload)
+        // 广播
+        notifyObservers(observerList, { id, type, payload })
       })
     })
-
-    const VALID_TYPE_RE = new RegExp(`^(${childPrefix}|${moduleName})`)
-    that.store.subscribe(({type, payload}, state) => {
-      if (VALID_TYPE_RE.test(type)) return
-      debugger
-      that.notifyObservers({type, payload})
-    })
-
-    window.addEventListener('message', this.update.bind(this))
   }
 
-  update ({ data: {type, payload} }) {
-    const {store} = this
+  /**
+   * 主业务逻辑更新
+   * @param {*} DepStore 
+   * @param {*} param1 
+   */
+  function invokeObserverMutation(DepStore, {CHILD_, VI_SYNC}) {
+    const VALID_TYPE_RE = new RegExp(`^(${CHILD_}|${VI_SYNC})`)
+    DepStore.subscribe(({ type, payload }, state) => {
+      if (VALID_TYPE_RE.test(type)) return
+      notifyObservers(observerList, { type, payload })
+    })
+  }
+
+  function update({ data: { type, payload } }) {
     if (!type || !Reflect.has(store._mutations, type)) return
-    debugger
     store.commit(type, payload)
   }
-}
 
-Subject.moduleName = ''
-Subject.parentPrefix = ''
-Subject.childPrefix = ''
+  /**
+   * 增加iframe监听
+   */
+  function addObserver(id) {
+    const child = childs.find(item => item === id)
+    child && notifyObserverIframe(id, child, staticOptions.moduleName, observerList)
+  }
+
+  function deleteObserver(id) {
+    const index = observerList.map(_ => _.id).indexOf(id)
+    index >= 0 && observerList.splice(index, 1)
+  }
+
+  function invokeNotifyObserver(DepStore, Observer, VI_SYNC) {
+    const payload = cloneWithout(DepStore.state, [VI_SYNC])
+    notifyObservers(Observer, {
+      type: INIT_STATE,
+      payload: payload
+    })
+  }
+}

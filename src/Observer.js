@@ -1,4 +1,4 @@
-import {isFunction, noop, identity} from './utils'
+import { isFunction, noop, identity, batch } from './utils'
 import {
   ADD_IN_BROADCAST_LIST,
   DEL_IN_BROADCAST_LIST,
@@ -32,7 +32,7 @@ export class Observer {
     this.createdCallback = isFunction(created) ? created : noop
     this.destroyedCallback = isFunction(destroyed) ? destroyed : noop
     this.init()
-    debugger
+    
   }
 
   init () {
@@ -52,7 +52,7 @@ export class Observer {
 
     store.subscribe(({type, payload}, state) => {
       if (type.indexOf(parentPrefix) >= 0) return
-      debugger
+      
       that.send(childPrefix + type, {id, payload})
     })
 
@@ -63,15 +63,14 @@ export class Observer {
   }
   update ({ data: {type, payload} }) {
     const {store} = this
-    console.log(type, payload, '---type, payload---');
     if ((!type || !Reflect.has(store._mutations, type)) && type !== INIT_STATE) return
-    debugger
+    
     const {parentPrefix} = Observer
     store.commit(parentPrefix + type, payload)
   }
 
   send (type, payload) {
-    debugger
+    
     this.parent && this.parent.postMessage({
       type,
       payload: this.convert(payload)

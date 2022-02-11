@@ -3,21 +3,26 @@ import Vuex from 'vuex'
 
 
 const userInfo = {
-  namespaced: true,
+  // namespaced: true,
   state: () => ({
     username: 'wangtianyou',
     uid: 88042
   }),
   mutations: {
     'change_user': (state, payload) => {
-      state.username = state.username + payload
+      state.count = state.count + payload
     }
   },
   actions: {
     'set_user': (ctx) => {
-      ctx.commit('add_count', 100);
+      ctx.commit('add_countEE', 100);
     }
   },
+  getters: {
+    getUsername(s) {
+      return s.username
+    }
+  }
 }
 
 Vue.use(Vuex)
@@ -27,7 +32,9 @@ export default {
     userInfo: userInfo
   },
   state: {
-    count: 0
+    count: 0,
+    username: 'wangtianyou',
+    uid: 88042
   },
   getters: {},
   mutations: {
